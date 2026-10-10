@@ -16,7 +16,7 @@ describe('StatCard Component', () => {
       />
     );
 
-    expect(screen.getByText(/Pemasukan Harian/i)).toBeInTheDocument();
+    expect(screen.getByText(/Income Harian/i)).toBeInTheDocument();
     expect(screen.getByText(/Rp1.250.000/i)).toBeInTheDocument();
     expect(screen.getByText(/\+4,8%/i)).toBeInTheDocument();
     expect(screen.getByText(/vs kemarin/i)).toBeInTheDocument();
@@ -34,7 +34,7 @@ describe('StatCard Component', () => {
       />
     );
 
-    expect(screen.getByText(/Pemasukan Bulanan/i)).toBeInTheDocument();
+    expect(screen.getByText(/Income Bulanan/i)).toBeInTheDocument();
     expect(screen.getByText(/-2,3%/i)).toBeInTheDocument();
   });
 });
