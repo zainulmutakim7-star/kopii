@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Wallet, ShoppingBag, Users2, Coffee, Sparkles } from "lucide-react";
-import { supabase } from "../../supabaseClient"; // Sesuaikan jalur jika berbeda
+import { apiClient } from "../../lib/apiClient";
 import Layout from "../components/layout/Layout";
 import Button from "../components/ui/Button";
 import PageHeader from "../components/ui/PageHeader";
@@ -44,20 +44,25 @@ export default function Dashboard({ onLogout }) {
         setLoading(true);
 
         // 1. Ambil data Menu / Inventaris
-        const { data: produkData, error: errorProduk } = await supabase.from('produk').select('*');
-        if (produkData) {
-          const formattedMenu = produkData
-            .slice(0, 5) // Tampilkan 5 menu saja di dashboard
-            .map((item) => ({
-              name: item.nama_produk,
-              qty: `${item.stok} stok`
-            }));
-          setBestSellers(formattedMenu);
+        try {
+          const produkData = await apiClient.get('/produk');
+          if (produkData) {
+            const formattedMenu = produkData
+              .slice(0, 5) // Tampilkan 5 menu saja di dashboard
+              .map((item) => ({
+                name: item.nama || item.nama_produk, // Handle both since SQL has `nama`
+                qty: `${item.stok} stok`
+              }));
+            setBestSellers(formattedMenu);
+          }
+        } catch (errorProduk) {
+          console.error(errorProduk);
         }
 
         // 2. Ambil data Transaksi untuk menghitung Pemasukan
-        const { data: trxData, error: errorTrx } = await supabase.from('transaksi').select('*');
-        if (trxData) {
+        try {
+          const trxData = await apiClient.get('/transaksi');
+          if (trxData) {
           let dailyTotal = 0;
           let weeklyTotal = 0;
           let monthlyTotal = 0;
@@ -102,6 +107,9 @@ export default function Dashboard({ onLogout }) {
             monthly: monthlyTotal,
             trxCount: monthlyTrxCount
           });
+        }
+        } catch (errorTrx) {
+          console.error(errorTrx);
         }
       } catch (err) {
         console.error("Terjadi kesalahan koneksi:", err);
@@ -210,7 +218,7 @@ export default function Dashboard({ onLogout }) {
             {loading ? (
               <Skeleton count={3} />
             ) : bestSellers.length === 0 ? (
-              <EmptyState title="Tidak ada data menu" description="Belum ada data produk di database Supabase." />
+              <EmptyState title="Tidak ada data menu" description="Belum ada data produk di database." />
             ) : (
               <ul className="mt-4 space-y-3">
                 {bestSellers.map((item) => (

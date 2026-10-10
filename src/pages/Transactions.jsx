@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { supabase } from "../../supabaseClient"; // Pastikan path ini sesuai dengan letak supabaseClient.js kamu
+import { apiClient } from "../lib/apiClient";
 import Layout from "../components/layout/Layout";
 import Button from "../components/ui/Button";
 import PageHeader from "../components/ui/PageHeader";
@@ -30,30 +30,12 @@ export default function Transactions({ onLogout }) {
     try {
       setLoading(true);
 
-      // Menarik data transaksi dan menghitung total item dari detail_transaksi
-      const { data, error } = await supabase
-        .from("transaksi")
-        .select(`
-          id,
-          tanggal,
-          total_harga,
-          metode_pembayaran,
-          nama_kasir,
-          detail_transaksi (
-            jumlah_beli
-          )
-        `)
-        .order("tanggal", { ascending: false });
-
-      if (error) throw error;
+      const data = await apiClient.get('/transaksi');
 
       // Format data dari database agar sesuai dengan desain UI
       const formattedData = data.map((item) => {
-        // Hitung total barang dari rincian struk
-        const totalItems = item.detail_transaksi?.reduce((sum, detail) => sum + detail.jumlah_beli, 0) || 0;
-
         // Format tanggal ke Indonesia (cth: 22 Jul 2026)
-        const dateObj = new Date(item.tanggal);
+        const dateObj = new Date(item.created_at || item.tanggal);
         const formattedDate = dateObj.toLocaleDateString("id-ID", {
           day: "numeric",
           month: "short",
@@ -62,12 +44,12 @@ export default function Transactions({ onLogout }) {
 
         return {
           id: `#${item.id}`,
-          customer: `Kasir: ${item.nama_kasir}`, // Sementara pakai nama kasir karena belum ada fitur pilih pelanggan di POS
-          total: item.total_harga,
+          customer: `Kasir: ${item.nama_kasir || 'Admin'}`, // Sementara pakai nama kasir karena belum ada fitur pilih pelanggan di POS
+          total: Number(item.total_harga),
           status: "Selesai", // Transaksi POS otomatis selesai
           date: formattedDate,
           payment: item.metode_pembayaran || "Tunai",
-          items: totalItems,
+          items: Number(item.total_items),
         };
       });
 

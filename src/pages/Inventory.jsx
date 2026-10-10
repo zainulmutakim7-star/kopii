@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../../supabaseClient";
+import { apiClient } from "../lib/apiClient";
 import { Trash2, Coffee, CupSoda, Utensils, PackageSearch, PlusCircle, LayoutGrid, Box } from "lucide-react";
 import Layout from "../components/layout/Layout";
 import Button from "../components/ui/Button";
@@ -22,12 +22,7 @@ export default function Inventory({ onLogout }) {
   const fetchProduk = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("produk")
-        .select("*")
-        .order("id", { ascending: false });
-
-      if (error) throw error;
+      const data = await apiClient.get('/produk');
       setItems(data || []);
     } catch (error) {
       console.error("Gagal memuat inventaris:", error.message);
@@ -46,16 +41,12 @@ export default function Inventory({ onLogout }) {
 
     try {
       setIsSubmitting(true);
-      const { error } = await supabase.from("produk").insert([
-        {
-          nama_produk: form.nama_produk.trim(),
-          kategori: form.kategori,
-          harga: parseInt(form.harga),
-          stok: parseInt(form.stok),
-        },
-      ]);
-
-      if (error) throw error;
+      await apiClient.post('/produk', {
+        nama: form.nama_produk.trim(),
+        kategori: form.kategori,
+        harga: parseInt(form.harga),
+        stok: parseInt(form.stok),
+      });
 
       setForm({ nama_produk: "", kategori: "Kopi", harga: "", stok: "" });
       fetchProduk();
@@ -72,8 +63,7 @@ export default function Inventory({ onLogout }) {
     if (!confirm) return;
 
     try {
-      const { error } = await supabase.from("produk").delete().eq("id", id);
-      if (error) throw error;
+      await apiClient.delete(`/produk/${id}`);
 
       fetchProduk();
     } catch (error) {
@@ -238,7 +228,7 @@ export default function Inventory({ onLogout }) {
                         {getCategoryIcon(entry.kategori)}
                       </div>
                       <div>
-                        <h3 className="text-[17px] font-black text-stone-900 line-clamp-1 group-hover:text-amber-600 transition-colors">{entry.nama_produk}</h3>
+                        <h3 className="text-[17px] font-black text-stone-900 line-clamp-1 group-hover:text-amber-600 transition-colors">{entry.nama || entry.nama_produk}</h3>
                         <p className="text-[13px] font-bold text-stone-400 mt-0.5 uppercase tracking-wide">{entry.kategori}</p>
                       </div>
                     </div>

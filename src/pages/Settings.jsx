@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { supabase } from "../../supabaseClient"; // Pastikan path ini sesuai
+import { apiClient } from "../lib/apiClient";
 import Layout from "../components/layout/Layout";
 import Button from "../components/ui/Button";
 import PageHeader from "../components/ui/PageHeader";
@@ -14,12 +14,7 @@ export default function Settings({ onLogout }) {
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("pengaturan")
-        .select("*")
-        .order("id", { ascending: true });
-
-      if (error) throw error;
+      const data = await apiClient.get('/pengaturan');
       setSettings(data || []);
     } catch (error) {
       console.error("Gagal memuat pengaturan:", error.message);
@@ -41,13 +36,7 @@ export default function Settings({ onLogout }) {
   // 3. Fungsi saat tombol "Simpan" ditekan (Update ke Supabase)
   const saveEditing = async (item) => {
     try {
-      // Update data di database
-      const { error } = await supabase
-        .from("pengaturan")
-        .update({ detail: draftValue })
-        .eq("id", item.id);
-
-      if (error) throw error;
+      await apiClient.put(`/pengaturan/${item.id}`, { detail: draftValue });
 
       // Jika sukses, update tampilan di layar
       setSettings((current) =>

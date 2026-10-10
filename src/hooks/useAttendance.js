@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { supabase } from "../../supabaseClient"; // Pastikan path ini benar mengarah ke file supabaseClient kamu
+import { apiClient } from "../../lib/apiClient"; // Updated to apiClient
 
 export default function useAttendance() {
   const [employees, setEmployees] = useState([]);
@@ -15,25 +15,20 @@ export default function useAttendance() {
     setError(null);
     try {
       // Tarik data Karyawan
-      const { data: dataKaryawan, error: errKaryawan } = await supabase
-        .from("karyawan")
-        .select("*")
-        .order("id", { ascending: true });
-
-      if (errKaryawan) throw errKaryawan;
+      const dataKaryawan = await apiClient.get('/karyawan');
       setEmployees(dataKaryawan || []);
 
       // Tarik data Absensi
-      const { data: dataAbsensi, error: errAbsensi } = await supabase
-        .from("absensi")
-        .select(`
+      const dataAbsensi = await apiClient.get('/absensi');
+
+
           id, status, waktu, tanggal,
           karyawan ( id, name, role )
         `)
         .order("tanggal", { ascending: false })
         .order("waktu", { ascending: false });
 
-      if (errAbsensi) throw errAbsensi;
+
 
       // Format data absensi agar cocok dengan desain UI Dashboard
       const formattedReport = dataAbsensi?.map((item) => {
@@ -128,11 +123,12 @@ export default function useAttendance() {
       const status = type === "masuk" ? (timeLabel > "08:00" ? "Telat" : "Hadir") : "Pulang";
 
       try {
-        const { error: errInsert } = await supabase
-          .from("absensi")
-          .insert([{ karyawan_id: employee.id, status, waktu: timeLabel, tanggal: date }]);
-
-        if (errInsert) throw errInsert;
+        await apiClient.post('/absensi', {
+          karyawan_id: employee.id,
+          status,
+          waktu: timeLabel,
+          tanggal: date,
+        });
 
         // Tarik ulang data terbaru dari database
         await loadInitialData();
@@ -162,11 +158,11 @@ export default function useAttendance() {
     setIsSubmitting(true);
     setError(null);
     try {
-      const { data, error: errInsert } = await supabase
-        .from("karyawan")
-        .insert([{ name: name.trim(), role: role.trim(), pin: String(pin).trim() }])
-        .select()
-        .single();
+      const data = await apiClient.post('/karyawan', {
+            name: name.trim(),
+            role: role.trim(),
+            pin: String(pin).trim(),
+          });
 
       if (errInsert) throw errInsert;
 
@@ -188,7 +184,7 @@ export default function useAttendance() {
     setIsSubmitting(true);
     setError(null);
     try {
-      const { data, error: errUpdate } = await supabase
+      const data = await apiClient.put(`/karyawan/${employeeId}`, updatedFields);
         .from("karyawan")
         .update({ name: name.trim(), role: role.trim(), pin: String(pin).trim() })
         .eq("id", id)
@@ -215,7 +211,7 @@ export default function useAttendance() {
     setIsSubmitting(true);
     setError(null);
     try {
-      const { error: errDel } = await supabase.from("karyawan").delete().eq("id", employeeId);
+      await apiClient.delete(`/karyawan/${employeeId}`);
       if (errDel) throw errDel;
 
       setEmployees((current) => current.filter((emp) => String(emp.id) !== String(employeeId)));

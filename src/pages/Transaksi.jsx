@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from "react";
-import { supabase } from "../../supabaseClient";
+import { apiClient } from "../lib/apiClient";
 import { ShoppingCart, Plus, Minus, Trash2, CheckCircle2, Loader2, Search, Coffee, Home, Printer } from "lucide-react";
 
 export default function Transaksi() {
@@ -35,15 +35,12 @@ export default function Transaksi() {
                 }
             }
 
-            const { data, error } = await supabase
-                .from("produk")
-                .select("*")
-                .order("nama_produk", { ascending: true });
+            const produkData = await apiClient.get('/produk');
 
-            if (error) throw error;
+            // apiClient throws on error, no explicit error variable
 
-            setProduk(data || []);
-            localStorage.setItem("cache_produk", JSON.stringify(data || [])); // Simpan data terbaru ke cache
+            setProduk(produkData || []);
+            localStorage.setItem("cache_produk", JSON.stringify(produkData || [])); // Simpan data terbaru ke cache
         } catch (error) {
             console.error("Gagal memuat produk:", error.message);
         } finally {
@@ -114,19 +111,14 @@ export default function Transaksi() {
         try {
             // Karena ini transaksi nyata, simpan totalHarga beserta user_id untuk RLS
             // Dapatkan user yang sedang login (Supabase v2)
-            const { data: { user } } = await supabase.auth.getUser();
-            const { data: dataTrx, error: errorTrx } = await supabase
-                .from("transaksi")
-                .insert([
-                    {
-                        total_harga: totalHarga,
-                        user_id: user ? user.id : null
-                    }
-                ])
-                .select()
-                .single();
+            // TODO: Replace with proper auth handling
+            const user = null;
+            const dataTrx = await apiClient.post('/transaksi', {
+                total_harga: totalHarga,
+                user_id: user ? user.id : null
+            });
 
-            if (errorTrx) throw errorTrx;
+            // Assume apiClient throws on error, proceed
             const transaksiId = dataTrx.id;
 
             const detailBelanja = keranjang.map((item) => ({
@@ -137,18 +129,11 @@ export default function Transaksi() {
     user_id: user ? user.id : null,
 }));
 
-            const { error: errorDetail } = await supabase
-                .from("detail_transaksi")
-                .insert(detailBelanja);
-
-            if (errorDetail) throw errorDetail;
+            await apiClient.post('/detail_transaksi', detailBelanja);
 
             for (const item of keranjang) {
                 const sisaStok = item.stok - item.jumlah;
-                await supabase
-                    .from("produk")
-                    .update({ stok: sisaStok })
-                    .eq("id", item.id);
+                await apiClient.put(`/produk/${item.id}`, { stok: sisaStok });
             }
 
             // Simpan data untuk Struk

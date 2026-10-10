@@ -1,5 +1,5 @@
 import { useMemo, useState, useEffect } from "react";
-import { supabase } from "../../supabaseClient"; // Pastikan path ini benar
+import { apiClient } from "../lib/apiClient";
 import { Trash2, PlusCircle } from "lucide-react";
 import Layout from "../components/layout/Layout";
 import Button from "../components/ui/Button";
@@ -19,15 +19,10 @@ export default function Customers({ onLogout }) {
   const fetchCustomers = async () => {
     try {
       setLoading(true);
-      const { data, error } = await supabase
-        .from("pelanggan")
-        .select("*")
-        .order("id", { ascending: false });
-
-      if (error) throw error;
+      const data = await apiClient.get('/pelanggan');
       setCustomers(data || []);
     } catch (error) {
-      console.error("Gagal memuat pelanggan:", error.message);
+      console.error("Gagal memuat pelanggan:", error);
     } finally {
       setLoading(false);
     }
@@ -44,16 +39,12 @@ export default function Customers({ onLogout }) {
 
     try {
       setIsSubmitting(true);
-      const { error } = await supabase.from("pelanggan").insert([
-        {
-          nama: form.nama.trim(),
-          no_hp: form.no_hp.trim() || "-",
-          total_order: 1, // Pelanggan baru otomatis dihitung 1 order pertamanya
-          terakhir_datang: new Date().toISOString(),
-        },
-      ]);
-
-      if (error) throw error;
+      await apiClient.post('/pelanggan', {
+        nama: form.nama.trim(),
+        no_hp: form.no_hp.trim() || "-",
+        total_order: 1,
+        terakhir_datang: new Date().toISOString(),
+      });
 
       setForm({ nama: "", no_hp: "" });
       fetchCustomers();
@@ -67,15 +58,10 @@ export default function Customers({ onLogout }) {
   // Fungsi tambah jumlah order (Loyalty Point)
   const handleAddOrder = async (id, currentOrders) => {
     try {
-      const { error } = await supabase
-        .from("pelanggan")
-        .update({
-          total_order: currentOrders + 1,
-          terakhir_datang: new Date().toISOString()
-        })
-        .eq("id", id);
-
-      if (error) throw error;
+      await apiClient.put(`/pelanggan/${id}`, {
+        total_order: currentOrders + 1,
+        terakhir_datang: new Date().toISOString()
+      });
       fetchCustomers(); // Refresh data
     } catch (error) {
       alert("Gagal mengupdate order pelanggan.");
@@ -88,8 +74,7 @@ export default function Customers({ onLogout }) {
     if (!confirm) return;
 
     try {
-      const { error } = await supabase.from("pelanggan").delete().eq("id", id);
-      if (error) throw error;
+      await apiClient.delete(`/pelanggan/${id}`);
       fetchCustomers();
     } catch (error) {
       alert("Gagal menghapus pelanggan.");

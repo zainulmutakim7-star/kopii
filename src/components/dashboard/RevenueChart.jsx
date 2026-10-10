@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { supabase } from "../../../supabaseClient";
+import { apiClient } from "../../lib/apiClient";
 import {
   AreaChart,
   Area,
@@ -50,11 +50,9 @@ export default function RevenueChart() {
     async function fetchChartData() {
       try {
         setLoading(true);
-        const { data: trxData, error } = await supabase
-          .from("transaksi")
-          .select("tanggal, total_harga");
+        const trxData = await apiClient.get('/transaksi?select=tanggal,total_harga');
 
-        if (error) throw error;
+        // No explicit error object; apiClient throws on non‑ok responses
 
         if (trxData) {
           const now = new Date();

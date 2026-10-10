@@ -30,30 +30,11 @@ const mockProduk = [
 // ------------------------------------------------------------------
 // Mock Supabase client
 // ------------------------------------------------------------------
-vi.mock('../../supabaseClient', () => ({
-  supabase: {
-    auth: {
-      getUser: vi.fn().mockResolvedValue({ data: { user: { id: 'test-user', email: 'kasir@zcoffee.id' } } }),
-      getSession: vi.fn().mockResolvedValue({ data: { session: null } }),
-      // Stub onAuthStateChange to avoid errors in AuthContext
-      onAuthStateChange: vi.fn().mockReturnValue({ data: { subscription: { unsubscribe: vi.fn() } } }),
-    },
-    from: vi.fn((table) => {
-      // Provide both select and update for all tables
-      return {
-        select: vi.fn(() => ({
-          order: vi.fn().mockResolvedValue({ data: mockProduk, error: null })
-        })),
-        insert: vi.fn(() => ({
-          select: vi.fn(() => ({
-            single: vi.fn().mockResolvedValue({ data: { id: 123 }, error: null })
-          })),
-        })),
-        update: vi.fn(() => ({
-          eq: vi.fn().mockResolvedValue({ error: null })
-        })),
-      };
-    }),
+vi.mock('../../lib/apiClient', () => ({
+  apiClient: {
+    get: vi.fn().mockResolvedValue(mockProduk),
+    post: vi.fn().mockResolvedValue({ data: { id: 123 } }),
+    // Add other methods if needed for future tests
   }
 }));
 
