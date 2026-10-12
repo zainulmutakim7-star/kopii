@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { apiClient } from "../../lib/apiClient"; // Updated to apiClient
+import { apiClient } from "../../lib/apiClient";
 
 export default function useAttendance() {
   const [employees, setEmployees] = useState([]);
@@ -9,7 +9,7 @@ export default function useAttendance() {
   const [error, setError] = useState(null);
   const [lastAction, setLastAction] = useState(null);
 
-  // 1. Fungsi Menarik Data Asli dari Supabase
+  // 1. Tarik data awal dari API
   const loadInitialData = useCallback(async () => {
     setIsInitializing(true);
     setError(null);
@@ -21,17 +21,8 @@ export default function useAttendance() {
       // Tarik data Absensi
       const dataAbsensi = await apiClient.get('/absensi');
 
-
-          id, status, waktu, tanggal,
-          karyawan ( id, name, role )
-        `)
-        .order("tanggal", { ascending: false })
-        .order("waktu", { ascending: false });
-
-
-
       // Format data absensi agar cocok dengan desain UI Dashboard
-      const formattedReport = dataAbsensi?.map((item) => {
+      const formattedReport = (dataAbsensi || []).map((item) => {
         const tone =
           item.status === "Hadir"
             ? "bg-emerald-50 text-emerald-700"
@@ -49,7 +40,7 @@ export default function useAttendance() {
           date: item.tanggal,
           tone,
         };
-      }) || [];
+      });
 
       setReport(formattedReport);
     } catch (err) {
@@ -103,7 +94,7 @@ export default function useAttendance() {
     [employees]
   );
 
-  // 3. Simpan Absensi Baru ke Supabase
+  // 3. Simpan Absensi Baru ke API
   const recordAttendance = useCallback(
     async ({ employeeId, type = "masuk" }) => {
       setIsSubmitting(true);
@@ -153,18 +144,16 @@ export default function useAttendance() {
     [employees, loadInitialData]
   );
 
-  // 4. Tambah Karyawan Baru ke Supabase
+  // 4. Tambah Karyawan Baru ke API
   const addEmployee = useCallback(async ({ name, role, pin }) => {
     setIsSubmitting(true);
     setError(null);
     try {
       const data = await apiClient.post('/karyawan', {
-            name: name.trim(),
-            role: role.trim(),
-            pin: String(pin).trim(),
-          });
-
-      if (errInsert) throw errInsert;
+        name: name.trim(),
+        role: role.trim(),
+        pin: String(pin).trim(),
+      });
 
       setEmployees((current) => [...current, data]);
 
@@ -179,19 +168,16 @@ export default function useAttendance() {
     }
   }, []);
 
-  // 5. Update Karyawan di Supabase
+  // 5. Update Karyawan di API
   const updateEmployee = useCallback(async ({ id, name, role, pin }) => {
     setIsSubmitting(true);
     setError(null);
     try {
-      const data = await apiClient.put(`/karyawan/${employeeId}`, updatedFields);
-        .from("karyawan")
-        .update({ name: name.trim(), role: role.trim(), pin: String(pin).trim() })
-        .eq("id", id)
-        .select()
-        .single();
-
-      if (errUpdate) throw errUpdate;
+      const data = await apiClient.put(`/karyawan/${id}`, {
+        name: name.trim(),
+        role: role.trim(),
+        pin: String(pin).trim(),
+      });
 
       setEmployees((current) => current.map((emp) => (String(emp.id) === String(id) ? data : emp)));
 
@@ -206,13 +192,12 @@ export default function useAttendance() {
     }
   }, []);
 
-  // 6. Hapus Karyawan dari Supabase
+  // 6. Hapus Karyawan dari API
   const deleteEmployee = useCallback(async (employeeId) => {
     setIsSubmitting(true);
     setError(null);
     try {
       await apiClient.delete(`/karyawan/${employeeId}`);
-      if (errDel) throw errDel;
 
       setEmployees((current) => current.filter((emp) => String(emp.id) !== String(employeeId)));
 
